@@ -174,7 +174,7 @@ export default function Home() {
             </Card>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="grid gap-4">
+          {/* <motion.div variants={itemVariants} className="grid gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
@@ -191,7 +191,7 @@ export default function Home() {
                 </Button>
               </CardFooter>
             </Card>
-          </motion.div>
+          </motion.div> */}
         </motion.div>
       </main>
     </div>
