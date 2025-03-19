@@ -92,4 +92,4 @@ async function handler(req: NextRequest) {
 }
 
 export const GET = (req: NextRequest) =>
-  withRateLimit(req, handler, { limit: 20, window: 60 });
+  withRateLimit(req, handler, { limit: 50, window: 60 });

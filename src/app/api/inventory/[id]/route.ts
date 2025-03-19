@@ -13,8 +13,6 @@ async function getHandler(
   try {
     await connectDB();
 
-    // logger.info("Fetching inventory item by ID", { id: params.id });
-
     const { id } = await params; // Await the params Promise to access 'id'
 
     const item = await InventoryItem.findById(id);

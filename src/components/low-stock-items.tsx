@@ -108,9 +108,9 @@ export function LowStockItems() {
                 </Badge>
               )}
             </div>
-            <Button size="sm" variant="outline" onClick={() => handleReorder(item._id)}>
+            {/* <Button size="sm" variant="outline" onClick={() => handleReorder(item._id)}>
               Reorder
-            </Button>
+            </Button> */}
           </div>
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>

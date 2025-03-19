@@ -27,11 +27,11 @@ export default function Sidebar() {
             label: "Staff",
             adminOnly: true,
         },
-        {
-            href: "/activity",
-            icon: ClipboardList,
-            label: "Activity Log",
-        },
+        // {
+        //     href: "/activity",
+        //     icon: ClipboardList,
+        //     label: "Activity Log",
+        // },
 
         {
             href: "/settings",

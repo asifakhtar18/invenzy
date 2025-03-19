@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
 // Initialize Redis client for storing rate limit data
@@ -25,41 +25,37 @@ export async function rateLimit(
 }> {
   const { limit, window } = options;
 
-  // Get identifier (IP address by default)
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
   const identifier = options.identifier || ip;
 
-  // Create a unique key for this rate limit
-  const key = `rate-limit:${identifier}:${req.nextUrl.pathname}`;
-
-  // Get the current count and timestamp
+  // Add timestamp to key to ensure window-based limits
   const now = Math.floor(Date.now() / 1000);
   const windowStart = now - (now % window);
-  const windowExpiry = windowStart + window;
-
-  let count: number;
+  const key = `rate-limit:${identifier}:${req.nextUrl.pathname}:${windowStart}`;
 
   try {
-    // Increment the counter for the current window
-    count = await redis.incr(key);
+    // Get current count or initialize if not exists
+    let count = (await redis.get(key)) as number;
 
-    // If this is the first request in this window, set expiry
-    if (count === 1) {
-      await redis.expire(key, window);
+    if (!count) {
+      // Set initial count and expiry
+      await redis.setex(key, window, 1);
+      count = 1;
+    } else {
+      // Increment count
+      count = await redis.incr(key);
     }
+
+    const remaining = Math.max(0, limit - count);
+    const success = count <= limit;
+    const reset = windowStart + window;
+
+    return { success, limit, remaining, reset };
   } catch (error) {
-    console.error("Rate limiting error:", error);
-    // If Redis is unavailable, allow the request but log the error
-    return { success: true, limit, remaining: limit, reset: windowExpiry };
+    console.error("Rate limit error:", error);
+    return { success: true, limit, remaining: limit, reset: now + window };
   }
-
-  // Calculate remaining requests
-  const remaining = Math.max(0, limit - count);
-  const success = count <= limit;
-
-  return { success, limit, remaining, reset: windowExpiry };
 }
-
 export function rateLimitResponse(
   rateLimitResult: Awaited<ReturnType<typeof rateLimit>>
 ): NextResponse {
@@ -79,7 +75,6 @@ export function rateLimitResponse(
   );
 }
 
-// Middleware to apply rate limiting to API routes
 export async function withRateLimit(
   req: NextRequest,
   handler: (req: NextRequest) => Promise<NextResponse> | NextResponse,

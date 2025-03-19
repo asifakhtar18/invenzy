@@ -1,14 +1,14 @@
-import mongoose, { Schema, type Document } from "mongoose"
+import mongoose, { Schema, type Document } from "mongoose";
 
 export interface ActivityLog extends Document {
-  type: "added" | "removed" | "adjusted"
-  item: mongoose.Types.ObjectId
-  itemName: string
-  quantity: string
-  timestamp: Date
-  user: mongoose.Types.ObjectId
-  userName: string
-  notes: string
+  type: "added" | "removed" | "adjusted";
+  item: mongoose.Types.ObjectId;
+  itemName: string;
+  quantity: string;
+  timestamp: Date;
+  user: mongoose.Types.ObjectId;
+  userName: string;
+  notes: string;
 }
 
 const ActivityLogSchema = new Schema<ActivityLog>({
@@ -32,7 +32,7 @@ const ActivityLogSchema = new Schema<ActivityLog>({
   },
   userName: { type: String, required: true },
   notes: { type: String },
-})
+});
 
-export default mongoose.models.ActivityLog || mongoose.model<ActivityLog>("ActivityLog", ActivityLogSchema)
-
+export default mongoose.models.ActivityLog ||
+  mongoose.model<ActivityLog>("ActivityLog", ActivityLogSchema);

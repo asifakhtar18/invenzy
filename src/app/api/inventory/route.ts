@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import InventoryItem from "@/models/inventory-item";
 import { withRateLimit } from "@/lib/rate-limit";
 import { withMonitoring } from "@/lib/monitoring";
+import User from "@/models/user";
 // import { logger } from "@/lib/logger"
 import { getServerUser } from "@/lib/auth";
 
@@ -10,10 +11,15 @@ async function handler(req: NextRequest) {
   try {
     await connectDB();
 
-    // Get current user
     const user = await getServerUser();
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    let admin;
+    if (user.role !== "admin") {
+      const userObj = await User.findById(user._id);
+      admin = userObj?.adminId?.toString();
     }
 
     const { searchParams } = new URL(req.url);
@@ -22,21 +28,15 @@ async function handler(req: NextRequest) {
 
     const query: any = {};
 
-    // Add user-specific filter for non-admin users
-    if (user.role !== "admin") {
-      query.createdBy = user._id;
-    }
+    query.user = admin || user._id;
 
     if (category && category !== "all") {
       query.category = category;
     }
 
     if (status && status !== "all") {
-      const statusArray = status.split(",");
-      query.status = statusArray.length > 1 ? { $in: statusArray } : status;
+      query.status = { $in: status?.split(",") };
     }
-
-    // logger.info("Fetching inventory items", { query, userId: user._id });
 
     const items = await InventoryItem.find(query).sort({ lastUpdated: -1 });
 
@@ -57,7 +57,7 @@ async function handler(req: NextRequest) {
 
 export function GET(req: NextRequest) {
   return withMonitoring(req, (req) =>
-    withRateLimit(req, handler, { limit: 100, window: 60 })
+    withRateLimit(req, handler, { limit: 500, window: 60 })
   );
 }
 
@@ -65,18 +65,24 @@ async function postHandler(req: NextRequest) {
   try {
     await connectDB();
 
-    // Get current user
     const user = await getServerUser();
 
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    let admin;
+
+    if (user.role !== "admin") {
+      const userObj = await User.findById(user._id);
+      admin = userObj?.adminId?.toString();
+    }
+
     const data = await req.json();
-    // logger.info("Creating new inventory item", { data, userId: user._id });
 
     const newItem = new InventoryItem({
       ...data,
+      user: admin || user._id,
       createdBy: user._id,
       createdByName: user.name,
     });
@@ -101,6 +107,6 @@ async function postHandler(req: NextRequest) {
 
 export function POST(req: NextRequest) {
   return withMonitoring(req, (req) =>
-    withRateLimit(req, postHandler, { limit: 20, window: 60 })
+    withRateLimit(req, postHandler, { limit: 500, window: 60 })
   );
 }

@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import InventoryItem from "@/models/inventory-item";
 import ActivityLog from "@/models/activity-log";
@@ -11,21 +11,28 @@ async function handler(req: NextRequest) {
   try {
     await connectDB();
 
-    // Get current user
     const user = await getServerUser();
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Query filters based on user role
-    const query = user.role === "admin" ? {} : { createdBy: user._id };
+    let admin;
+
+    if (user.role !== "admin") {
+      const userObj = await User.findById(user._id);
+      admin = userObj?.adminId?.toString();
+    }
+
+    const query = user.role === "admin" ? {} : { createdBy: admin || user._id };
 
     // Get total items count
-    const totalItems = await InventoryItem.countDocuments(query);
+    const totalItems = await InventoryItem.countDocuments({
+      createdBy: admin || user._id,
+    });
 
     // Get low stock items count
     const lowStockItems = await InventoryItem.countDocuments({
-      ...query,
+      createdBy: admin || user._id,
       status: { $in: ["warning", "critical"] },
     });
 
@@ -88,9 +95,11 @@ async function handler(req: NextRequest) {
     }, 0);
 
     // Get active staff count
+
+    // For admin users, find all staff they created
+    // For non-admin users, count will be 0 as they don't have staff
     const activeStaff = await User.countDocuments({
-      status: "active",
-      ...(user.role !== "admin" ? { _id: user._id } : {}),
+      adminId: user.role === "admin" ? user._id : admin,
     });
 
     return NextResponse.json(
@@ -112,4 +121,4 @@ async function handler(req: NextRequest) {
 }
 
 export const GET = (req: NextRequest) =>
-  withRateLimit(req, handler, { limit: 20, window: 60 });
+  withRateLimit(req, handler, { limit: 50, window: 60 });
